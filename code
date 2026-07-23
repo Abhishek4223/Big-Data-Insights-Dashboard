@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Big Data Insights Dashboard — Apple Pricing Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#0E0F16;
+    --ink-2:#151726;
+    --panel:#1A1C2C;
+    --panel-2:#20223370;
+    --line:#2E3050;
+    --line-soft:rgba(255,255,255,0.07);
+    --marigold:#FFB020;
+    --amber2:#FF7A45;
+    --teal:#2DD4BF;
+    --coral:#FB6F84;
+    --violet:#A78BFA;
+    --blue:#60A5FA;
+    --paper:#F6F4EE;
+    --muted:#9295AE;
+    --muted-2:#666A85;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1000px 460px at 90% -6%, rgba(255,176,32,0.16), transparent 60%),
+      radial-gradient(900px 480px at -6% 4%, rgba(45,212,191,0.13), transparent 60%),
+      radial-gradient(750px 520px at 45% 105%, rgba(167,139,250,0.13), transparent 60%),
+      radial-gradient(600px 400px at 65% 40%, rgba(251,111,132,0.07), transparent 60%),
+      var(--ink);
+    color:var(--paper);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    position:relative;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:0.035; z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap{max-width:1300px; margin:0 auto; padding:0 24px 90px; position:relative; z-index:1;}
+
+  @keyframes riseIn{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);} }
+  .rise{ animation:riseIn .6s cubic-bezier(.2,.7,.2,1) both; }
+
+  /* ===== Sticky nav ===== */
+  .navbar{
+    position:sticky; top:0; z-index:20; backdrop-filter:blur(14px);
+    background:rgba(14,15,22,0.72); border-bottom:1px solid var(--line-soft);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 24px; margin:0 -24px 36px;
+  }
+  .navbar .brand{display:flex; align-items:center; gap:9px; font-family:'Fraunces',serif; font-weight:700; font-size:15px;}
+  .navbar .brand .swatch{width:16px; height:16px; border-radius:5px; background:conic-gradient(from 90deg, var(--marigold), var(--coral), var(--violet), var(--teal), var(--marigold));}
+  .navlinks{display:flex; gap:4px;}
+  .navlinks a{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted);
+    text-decoration:none; padding:7px 13px; border-radius:999px; transition:all .18s ease;
+  }
+  .navlinks a:hover{ color:var(--paper); background:var(--panel-2); }
+
+  .top-spacer{height:28px;}
+
+  /* ===== Header / Hero ===== */
+  header.hero{
+    display:grid; grid-template-columns:1.4fr 1fr; gap:22px; align-items:stretch;
+    margin-bottom:22px;
+  }
+  .hero-left{
+    background:linear-gradient(155deg, #22192E 0%, #1A1C2C 45%, #17202B 100%);
+    border:1px solid var(--line); border-radius:22px; padding:36px 36px 30px;
+    position:relative; overflow:hidden;
+  }
+  .hero-left::after{
+    content:""; position:absolute; right:-70px; top:-70px; width:260px; height:260px;
+    border-radius:50%; background:radial-gradient(circle, rgba(255,176,32,0.22), transparent 70%);
+  }
+  .hero-left::before{
+    content:""; position:absolute; left:-40px; bottom:-90px; width:220px; height:220px;
+    border-radius:50%; background:radial-gradient(circle, rgba(167,139,250,0.18), transparent 70%);
+  }
+  .rings{ position:absolute; right:18px; bottom:-30px; width:180px; height:180px; opacity:0.5; }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px; position:relative; z-index:1;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; letter-spacing:0.16em;
+    text-transform:uppercase; color:var(--marigold); margin:0 0 16px;
+    padding:5px 12px 5px 8px; border:1px solid rgba(255,176,32,0.4); border-radius:999px;
+    background:rgba(255,176,32,0.12);
+  }
+  .eyebrow .dot{width:6px; height:6px; border-radius:50%; background:var(--marigold); box-shadow:0 0 8px var(--marigold);}
+  h1{
+    font-family:'Fraunces', serif; font-weight:700; position:relative; z-index:1;
+    font-size:46px; line-height:1.02; margin:0; letter-spacing:-0.015em;
+    max-width:520px;
+  }
+  h1 .grad{
+    background:linear-gradient(95deg, var(--marigold), var(--coral) 55%, var(--violet));
+    -webkit-background-clip:text; background-clip:text; color:transparent; font-style:italic; font-weight:600;
+  }
+  header .sub{color:var(--muted); font-size:14.5px; margin-top:16px; max-width:460px; line-height:1.6; position:relative; z-index:1;}
+  .hero-meta{display:flex; gap:24px; margin-top:26px; flex-wrap:wrap; position:relative; z-index:1;}
+  .hero-meta div{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted-2);}
+  .hero-meta b{display:block; color:var(--paper); font-size:14.5px; font-family:'Inter',sans-serif; font-weight:600; margin-top:3px;}
+
+  .ticket{
+    position:relative; border-radius:22px;
+    background:linear-gradient(150deg, #3A2410 0%, #241830 55%, var(--panel) 100%);
+    border:1px solid rgba(255,176,32,0.3);
+    padding:28px 30px; display:flex; flex-direction:column; justify-content:space-between;
+    overflow:hidden;
+  }
+  .ticket::before, .ticket::after{
+    content:""; position:absolute; width:26px; height:26px; background:var(--ink);
+    border-radius:50%; left:-13px; box-shadow:inset 0 0 0 1px rgba(255,176,32,0.3);
+  }
+  .ticket::before{ top:calc(50% - 13px); }
+  .ticket::after{ right:-13px; left:auto; top:calc(50% - 13px); }
+  .ticket-notch{ border-top:2px dashed rgba(255,176,32,0.35); margin:18px 0; }
+  .ticket-label{font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--marigold); margin-bottom:6px;}
+  .ticket-value{font-family:'Fraunces',serif; font-size:50px; font-weight:700; line-height:1; color:var(--paper);}
+  .ticket-value sup{font-size:19px; color:var(--marigold); font-family:'Inter',sans-serif; font-weight:700;}
+  .ticket-sub{font-size:12.5px; color:var(--muted); margin-top:10px;}
+  .ticket-foot{display:flex; justify-content:space-between; align-items:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted-2);}
+  .ticket-foot b{color:var(--teal);}
+
+  /* ===== Story cards ===== */
+  .story-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:30px; }
+  .story{
+    border-radius:16px; padding:18px 20px; position:relative; overflow:hidden;
+    border:1px solid var(--line); background:var(--panel);
+  }
+  .story .bar{ position:absolute; left:0; top:0; bottom:0; width:4px; }
+  .story .k{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.09em; color:var(--muted-2); margin-bottom:8px; padding-left:8px;}
+  .story .v{ font-family:'Fraunces',serif; font-weight:700; font-size:19px; padding-left:8px; margin-bottom:4px; }
+  .story .d{ font-size:12px; color:var(--muted); padding-left:8px; }
+  .story.c1 .bar{background:linear-gradient(var(--marigold),var(--amber2));} .story.c1 .v{color:var(--marigold);}
+  .story.c2 .bar{background:linear-gradient(var(--violet),#7C6CF0);} .story.c2 .v{color:var(--violet);}
+  .story.c3 .bar{background:linear-gradient(var(--teal),#22B8A6);} .story.c3 .v{color:var(--teal);}
+
+  /* ===== KPI strip ===== */
+  .kpi-strip{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:34px; }
+  .kpi{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding:18px 18px; position:relative; overflow:hidden;
+    transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .kpi:hover{ transform:translateY(-3px); }
+  .kpi .icon{ width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; margin-bottom:12px; }
+  .kpi .icon svg{ width:16px; height:16px; }
+  .kpi .label{font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted); margin-bottom:6px;}
+  .kpi .value{font-family:'Fraunces',serif; font-weight:700; font-size:26px; color:var(--paper);}
+  .kpi .value span{font-size:13px; color:var(--muted); font-weight:400; font-family:'Inter',sans-serif;}
+  .kpi.c-marigold{ border-color:rgba(255,176,32,0.35); } .kpi.c-marigold:hover{ box-shadow:0 12px 32px -14px rgba(255,176,32,0.4);} .kpi.c-marigold .icon{background:rgba(255,176,32,0.15);}
+  .kpi.c-teal{ border-color:rgba(45,212,191,0.35); } .kpi.c-teal:hover{ box-shadow:0 12px 32px -14px rgba(45,212,191,0.4);} .kpi.c-teal .icon{background:rgba(45,212,191,0.15);}
+  .kpi.c-coral{ border-color:rgba(251,111,132,0.35); } .kpi.c-coral:hover{ box-shadow:0 12px 32px -14px rgba(251,111,132,0.4);} .kpi.c-coral .icon{background:rgba(251,111,132,0.15);}
+  .kpi.c-violet{ border-color:rgba(167,139,250,0.35); } .kpi.c-violet:hover{ box-shadow:0 12px 32px -14px rgba(167,139,250,0.4);} .kpi.c-violet .icon{background:rgba(167,139,250,0.15);}
+  .kpi.c-blue{ border-color:rgba(96,165,250,0.35); } .kpi.c-blue:hover{ box-shadow:0 12px 32px -14px rgba(96,165,250,0.4);} .kpi.c-blue .icon{background:rgba(96,165,250,0.15);}
+
+  /* ===== Section headers ===== */
+  .section-head{ display:flex; justify-content:space-between; align-items:flex-end; margin:46px 0 16px; flex-wrap:wrap; gap:10px; scroll-margin-top:80px;}
+  .section-head .tag{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted-2);
+    text-transform:uppercase; letter-spacing:0.12em; margin-bottom:8px; display:flex; align-items:center; gap:8px;
+  }
+  .section-head .tag::before{ content:""; width:20px; height:2px; background:linear-gradient(90deg,var(--marigold),var(--coral)); border-radius:2px; }
+  .section-head h2{ font-family:'Fraunces',serif; font-weight:700; font-size:25px; margin:0; }
+  .insight-chip{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--marigold);
+    background:rgba(255,176,32,0.12); border:1px solid rgba(255,176,32,0.35);
+    padding:6px 12px; border-radius:8px; max-width:340px;
+  }
+
+  /* ===== Signature chart ===== */
+  .signature{
+    background:linear-gradient(135deg, var(--panel) 0%, #1E1F30 100%);
+    border:1px solid var(--line); border-radius:22px; padding:28px 30px 14px;
+    margin-bottom:8px; position:relative;
+  }
+  .chart-box{position:relative; height:260px; margin-top:6px;}
+
+  /* ===== Grid cards ===== */
+  .grid-2{display:grid; grid-template-columns:1.3fr 1fr; gap:18px; margin-bottom:18px;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    padding:24px 26px; transition:border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+  }
+  .card:hover{ border-color:rgba(255,255,255,0.16); box-shadow:0 18px 44px -24px rgba(0,0,0,0.7); transform:translateY(-2px); }
+  .card h3{font-family:'Fraunces',serif; font-weight:700; font-size:17.5px; margin:0 0 3px;}
+  .card .desc{color:var(--muted); font-size:12.5px; margin:0 0 16px;}
+  .card .chart-box{height:220px;}
+  .toggle-row{display:flex; gap:7px; margin-bottom:14px; flex-wrap:wrap;}
+  .toggle-row button{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; background:transparent;
+    border:1.5px solid var(--line); color:var(--muted); padding:6px 13px; border-radius:999px;
+    cursor:pointer; transition:all .18s ease;
+  }
+  .toggle-row button:hover{ transform:translateY(-1px); }
+  .toggle-row button.active{ font-weight:700; }
+
+  /* ===== Table ===== */
+  .table-card{margin-bottom:18px;}
+  .table-controls{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center;}
+  .table-controls input{
+    background:#20223370; border:1px solid var(--line); color:var(--paper);
+    padding:10px 14px; border-radius:10px; font-family:'Inter',sans-serif; font-size:13px;
+    flex:1; min-width:200px; outline:none; transition:border-color .2s ease;
+  }
+  .table-controls input:focus{ border-color:var(--marigold); }
+  .table-controls select{
+    background:#20223370; border:1px solid var(--line); color:var(--paper);
+    padding:10px 14px; border-radius:10px; font-family:'Inter',sans-serif; font-size:13px;
+  }
+  .table-scroll{ overflow:auto; max-height:520px; border-radius:12px; }
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{ position:sticky; top:0; background:#20223370; backdrop-filter:blur(6px); z-index:2; }
+  th{
+    text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+    text-transform:uppercase; letter-spacing:0.06em; color:var(--muted-2);
+    padding:12px; border-bottom:1px solid var(--line); cursor:pointer; user-select:none;
+    white-space:nowrap; transition:color .15s ease;
+  }
+  th:hover{color:var(--marigold);}
+  td{padding:11px 12px; border-bottom:1px solid var(--line-soft); font-family:'IBM Plex Mono',monospace; font-size:12.5px;}
+  td.name{font-family:'Inter',sans-serif; font-size:13px; font-weight:500; color:var(--paper);}
+  tbody tr{ transition:background .15s ease; }
+  tbody tr:hover td{background:#20223370;}
+  .pill{
+    display:inline-block; padding:3px 10px; border-radius:999px; font-size:10.5px;
+    font-family:'IBM Plex Mono',monospace; font-weight:700;
+  }
+  .pill.Watch{background:rgba(45,212,191,0.16); color:var(--teal);}
+  .pill.iPhone{background:rgba(255,176,32,0.16); color:var(--marigold);}
+  .pill.iPad{background:rgba(251,111,132,0.16); color:var(--coral);}
+  .pill.Mac{background:rgba(167,139,250,0.16); color:var(--violet);}
+  .disc-bar-bg{background:var(--line); border-radius:4px; height:6px; width:64px; display:inline-block; vertical-align:middle; margin-right:8px; overflow:hidden;}
+  .disc-bar{height:100%; background:linear-gradient(90deg, var(--marigold), var(--coral)); border-radius:4px;}
+  .flame{ margin-left:4px; }
+
+  footer{color:var(--muted-2); font-size:12px; text-align:center; margin-top:48px; font-family:'IBM Plex Mono',monospace; letter-spacing:0.03em;}
+
+  @media (max-width:980px){
+    header.hero{grid-template-columns:1fr;}
+    .story-row{grid-template-columns:1fr;}
+    .kpi-strip{grid-template-columns:repeat(2,1fr);}
+    .grid-2{grid-template-columns:1fr;}
+    h1{font-size:34px;}
+    .navlinks{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="navbar">
+    <div class="brand"><span class="swatch"></span>Big Data Insights</div>
+    <div class="navlinks">
+      <a href="#trend">Trend</a>
+      <a href="#behaviour">Price Behaviour</a>
+      <a href="#models">Model Explorer</a>
+    </div>
+  </div>
+  <div class="top-spacer"></div>
+
+  <header class="hero rise">
+    <div class="hero-left">
+      <span class="eyebrow"><span class="dot"></span>Big Data Insights Dashboard</span>
+      <h1>Apple pricing, <span class="grad">decoded.</span></h1>
+      <p class="sub">Flipkart &amp; Amazon India · iPhone, iPad, Mac &amp; Watch — how discounting behaviour, festival sales, and platform rivalry shape what people actually pay.</p>
+      <div class="hero-meta">
+        <div>Window<b id="metaRange">—</b></div>
+        <div>Platforms<b>Amazon · Flipkart</b></div>
+        <div>Product lines<b>iPhone · iPad · Mac · Watch</b></div>
+      </div>
+    </div>
+    <div class="ticket">
+      <div>
+        <div class="ticket-label">Listings Analyzed</div>
+        <div class="ticket-value" id="ticketMain">—</div>
+        <div class="ticket-sub">Every row a real price snapshot — platform, condition, stock &amp; rating included.</div>
+      </div>
+      <div class="ticket-notch"></div>
+      <div class="ticket-foot">
+        <span>Avg. discount <b id="ticketDiscount">—</b></span>
+        <span>Avg. rating <b id="ticketRating">—</b></span>
+      </div>
+    </div>
+  </header>
+
+  <section class="story-row" id="storyRow"></section>
+
+  <section class="kpi-strip" id="kpiStrip"></section>
+
+  <section class="signature rise" id="trend">
+    <div class="section-head" style="margin-top:0;">
+      <div>
+        <span class="tag">01 · Discounting Trend</span>
+        <h2>The discount escalator</h2>
+      </div>
+      <div class="insight-chip" id="escalatorTag">Loading…</div>
+    </div>
+    <p style="color:var(--muted); font-size:13px; max-width:560px; margin:-8px 0 0;">Average markdown on Apple products has climbed nearly every year since 2020 — sellers lean harder on discounting each season to move inventory.</p>
+    <div class="chart-box"><canvas id="escalatorChart"></canvas></div>
+  </section>
+
+  <div class="section-head" id="behaviour">
+    <div><span class="tag">02 · Price Behaviour</span><h2>Where the money moves</h2></div>
+  </div>
+  <section class="grid-2">
+    <div class="card">
+      <h3>Average Selling Price Over Time</h3>
+      <p class="desc">Monthly average current price (USD) by product category</p>
+      <div class="toggle-row" id="catToggle"></div>
+      <div class="chart-box"><canvas id="priceTrendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Amazon vs Flipkart</h3>
+      <p class="desc">Head-to-head on discount depth, price &amp; engagement</p>
+      <div class="chart-box"><canvas id="platformChart"></canvas></div>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card">
+      <h3>Festival Sale Impact</h3>
+      <p class="desc">Average discount % — sale events vs regular days</p>
+      <div class="chart-box"><canvas id="saleEventChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Category Mix</h3>
+      <p class="desc">Share of listings by product line</p>
+      <div class="chart-box"><canvas id="donutChart"></canvas></div>
+    </div>
+  </section>
+
+  <div class="section-head" id="models">
+    <div><span class="tag">03 · Model Explorer</span><h2>Every model, side by side</h2></div>
+  </div>
+  <section class="card table-card">
+    <div class="table-controls">
+      <input type="text" id="searchBox" placeholder="Search model name…">
+      <select id="categoryFilter">
+        <option value="all">All Categories</option>
+        <option value="iPhone">iPhone</option>
+        <option value="iPad">iPad</option>
+        <option value="Mac">Mac</option>
+        <option value="Watch">Watch</option>
+      </select>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="Model_Name">Model</th>
+            <th data-key="category">Category</th>
+            <th data-key="first_date">First Seen</th>
+            <th data-key="launch_price">Launch $</th>
+            <th data-key="avg_current_price">Avg Current $</th>
+            <th data-key="avg_discount">Avg Discount</th>
+            <th data-key="avg_rating">Rating</th>
+            <th data-key="total_reviews">Reviews</th>
+          </tr>
+        </thead>
+        <tbody id="modelTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>Big Data Insights Dashboard · 80,000 listings analyzed · 2020–2026 · Flipkart &amp; Amazon</footer>
+</div>
+
+<script>
+const DATA = {"kpis": {"total_records": 80000, "date_start": "2020-09-19", "date_end": "2026-07-31", "avg_discount": 21.42, "avg_rating": 4.45, "total_reviews": 192479674, "num_models": 31, "platforms": ["Flipkart", "Amazon"], "categories": ["Watch", "iPad", "iPhone", "Mac"]}, "monthly_price_by_category": {"YearMonth": ["2020-09", "2020-10", "2020-11", "2020-12", "2021-01", "2021-02", "2021-03", "2021-04", "2021-05", "2021-06", "2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07"], "Mac": [null, null, 831.53, 953.32, 924.72, 908.35, 929.05, 969.22, 930.45, 951.21, 947.67, 934.17, 944.79, 1053.46, 1426.89, 1418.05, 1307.03, 1383.92, 1391.34, 1464.65, 1377.52, 1425.08, 1388.59, 1282.02, 1290.44, 1191.76, 1210.96, 1271.08, 1431.31, 1406.92, 1426.58, 1473.07, 1462.87, 1438.32, 1405.55, 1408.24, 1435.87, 1272.94, 1446.79, 1531.46, 1492.14, 1444.55, 1354.66, 1362.71, 1386.96, 1387.92, 1329.43, 1377.9, 1375.08, 1249.87, 1387.84, 1456.97, 1487.23, 1459.24, 1462.78, 1452.19, 1424.74, 1432.18, 1424.32, 1417.49, 1432.38, 1332.21, 1303.97, 1390.19, 1402.33, 1361.77, 1354.36, 1366.96, 1389.95, 1355.26, 1313.33], "Watch": [417.21, 368.4, 364.49, 407.77, 394.31, 407.66, 408.58, 405.58, 407.31, 398.17, 394.49, 412.1, 379.85, 329.33, 337.96, 383.44, 370.04, 360.88, 360.8, 363.0, 369.28, 355.92, 347.16, 356.67, 419.92, 441.03, 422.24, 471.57, 483.19, 445.74, 430.22, 452.48, 438.52, 463.15, 431.38, 472.25, 469.63, 403.13, 442.6, 463.13, 476.37, 454.17, 463.65, 470.84, 448.58, 477.69, 464.15, 456.22, 426.63, 367.22, 387.74, 397.96, 395.7, 405.67, 416.57, 409.89, 400.49, 384.68, 401.61, 403.16, 380.6, 313.84, 326.23, 329.18, 336.98, 351.2, 333.37, 337.78, 335.38, 337.58, 325.85], "iPad": [null, 565.93, 517.16, 556.4, 567.85, 557.25, 563.92, 568.04, 604.36, 645.88, 658.48, 693.38, 640.29, 513.5, 529.15, 506.71, 526.16, 508.23, 513.7, 500.18, 520.76, 500.37, 487.7, 493.18, 488.86, 483.92, 585.6, 628.61, 600.94, 615.45, 635.22, 549.39, 580.67, 568.83, 556.9, 560.33, 613.11, 527.56, 512.64, 570.42, 545.14, 513.46, 500.81, 534.07, 622.81, 652.61, 630.11, 609.85, 659.23, 591.3, 589.91, 631.53, 613.05, 605.7, 598.07, 602.19, 585.1, 558.68, 585.41, 585.8, 586.01, 543.67, 534.42, 591.34, 568.09, 573.47, 586.08, 568.32, 558.11, 551.76, 520.64], "iPhone": [null, 935.58, 805.81, 848.28, 850.92, 834.85, 842.96, 835.53, 849.97, 828.6, 832.06, 824.77, 887.94, 826.93, 823.48, 860.44, 869.31, 811.94, 871.47, 858.52, 839.67, 885.26, 854.34, 855.83, 855.71, 737.5, 755.39, 783.31, 806.66, 807.35, 812.22, 798.1, 796.88, 810.86, 787.79, 798.55, 813.32, 718.82, 769.12, 793.41, 787.33, 812.33, 775.5, 782.66, 773.84, 791.85, 765.48, 779.95, 789.0, 690.86, 733.43, 772.48, 774.5, 769.3, 768.14, 764.41, 775.68, 763.46, 766.94, 770.75, 753.06, 640.65, 686.8, 724.77, 716.49, 736.31, 711.17, 714.11, 717.65, 716.6, 706.45]}, "platform_comparison": [{"Platform": "Amazon", "avg_discount": 21.52, "avg_rating": 4.45, "avg_reviews": 2400.89, "avg_price": 783.97, "count": 39957}, {"Platform": "Flipkart", "avg_discount": 21.32, "avg_rating": 4.45, "avg_reviews": 2411.09, "avg_price": 781.57, "count": 40043}], "sale_event_impact": [{"Sale_Event_Filled": "Big Billion Days", "avg_discount": 37.02, "count": 1579, "avg_rating": 4.45}, {"Sale_Event_Filled": "Black Friday", "avg_discount": 31.46, "count": 2497, "avg_rating": 4.45}, {"Sale_Event_Filled": "Great Indian Festival", "avg_discount": 33.45, "count": 1504, "avg_rating": 4.44}, {"Sale_Event_Filled": "No Sale", "avg_discount": 20.3, "count": 73351, "avg_rating": 4.45}, {"Sale_Event_Filled": "Prime Day", "avg_discount": 34.44, "count": 1069, "avg_rating": 4.45}], "category_distribution": [{"Product_Category": "Mac", "count": 18020, "avg_price": 1382.49, "avg_discount": 15.43, "total_reviews": 41174963}, {"Product_Category": "Watch", "count": 17865, "avg_price": 398.64, "avg_discount": 26.27, "total_reviews": 42520463}, {"Product_Category": "iPad", "count": 15526, "avg_price": 573.08, "avg_discount": 26.19, "total_reviews": 43597043}, {"Product_Category": "iPhone", "count": 28589, "avg_price": 758.67, "avg_discount": 19.57, "total_reviews": 65187205}], "stock_distribution": [{"status": "In Stock", "count": 55034}, {"status": "Out of Stock", "count": 13475}, {"status": "Low Stock", "count": 11491}], "condition_comparison": [{"Product_Category": "Mac", "Condition": "New", "avg_price": 1465.62, "avg_discount": 10.39}, {"Product_Category": "Mac", "Condition": "Renewed/Refurbished", "avg_price": 1134.12, "avg_discount": 30.48}, {"Product_Category": "Watch", "Condition": "New", "avg_price": 422.87, "avg_discount": 21.72}, {"Product_Category": "Watch", "Condition": "Renewed/Refurbished", "avg_price": 327.81, "avg_discount": 39.55}, {"Product_Category": "iPad", "Condition": "New", "avg_price": 608.53, "avg_discount": 21.74}, {"Product_Category": "iPad", "Condition": "Renewed/Refurbished", "avg_price": 467.6, "avg_discount": 39.42}, {"Product_Category": "iPhone", "Condition": "New", "avg_price": 802.87, "avg_discount": 14.85}, {"Product_Category": "iPhone", "Condition": "Renewed/Refurbished", "avg_price": 623.3, "avg_discount": 34.03}], "model_stats": [{"Model_Name": "Apple Watch Series 6 (44mm)", "launch_price": 429, "avg_current_price": 280.15, "avg_discount": 34.7, "total_reviews": 9432985, "avg_rating": 4.45, "category": "Watch", "first_date": "2020-09-19"}, {"Model_Name": "iPhone 12 Pro 128GB", "launch_price": 999, "avg_current_price": 710.98, "avg_discount": 28.83, "total_reviews": 9695181, "avg_rating": 4.45, "category": "iPhone", "first_date": "2020-10-23"}, {"Model_Name": "iPhone 12 64GB", "launch_price": 799, "avg_current_price": 555.61, "avg_discount": 30.46, "total_reviews": 9281382, "avg_rating": 4.45, "category": "iPhone", "first_date": "2020-10-23"}, {"Model_Name": "iPad Air (4th Gen) 64GB", "launch_price": 599, "avg_current_price": 404.1, "avg_discount": 32.54, "total_reviews": 9610122, "avg_rating": 4.45, "category": "iPad", "first_date": "2020-10-23"}, {"Model_Name": "MacBook Air M1 256GB", "launch_price": 999, "avg_current_price": 718.7, "avg_discount": 28.06, "total_reviews": 9408082, "avg_rating": 4.45, "category": "Mac", "first_date": "2020-11-17"}, {"Model_Name": "iPad Pro 11-inch (M1) 128GB", "launch_price": 799, "avg_current_price": 569.28, "avg_discount": 28.75, "total_reviews": 8765377, "avg_rating": 4.45, "category": "iPad", "first_date": "2021-05-22"}, {"Model_Name": "iPhone 13 Pro Max 256GB", "launch_price": 1199, "avg_current_price": 936.62, "avg_discount": 21.88, "total_reviews": 7623690, "avg_rating": 4.44, "category": "iPhone", "first_date": "2021-09-24"}, {"Model_Name": "iPhone 13 128GB", "launch_price": 799, "avg_current_price": 579.22, "avg_discount": 27.51, "total_reviews": 7922712, "avg_rating": 4.45, "category": "iPhone", "first_date": "2021-09-24"}, {"Model_Name": "iPad (9th Gen) 64GB", "launch_price": 329, "avg_current_price": 214.97, "avg_discount": 34.66, "total_reviews": 7942664, "avg_rating": 4.45, "category": "iPad", "first_date": "2021-09-25"}, {"Model_Name": "Apple Watch Series 7 (45mm)", "launch_price": 429, "avg_current_price": 286.46, "avg_discount": 33.23, "total_reviews": 8006933, "avg_rating": 4.44, "category": "Watch", "first_date": "2021-10-15"}, {"Model_Name": "MacBook Pro 14-inch M1 Pro 512GB", "launch_price": 1999, "avg_current_price": 1686.46, "avg_discount": 15.63, "total_reviews": 7698954, "avg_rating": 4.45, "category": "Mac", "first_date": "2021-10-26"}, {"Model_Name": "iPad Air (5th Gen) 64GB", "launch_price": 599, "avg_current_price": 421.37, "avg_discount": 29.65, "total_reviews": 7415240, "avg_rating": 4.45, "category": "iPad", "first_date": "2022-03-18"}, {"Model_Name": "MacBook Air M2 256GB", "launch_price": 1199, "avg_current_price": 971.62, "avg_discount": 18.96, "total_reviews": 6759193, "avg_rating": 4.45, "category": "Mac", "first_date": "2022-07-15"}, {"Model_Name": "iPhone 14 Pro 128GB", "launch_price": 999, "avg_current_price": 793.88, "avg_discount": 20.53, "total_reviews": 6897992, "avg_rating": 4.46, "category": "iPhone", "first_date": "2022-09-16"}, {"Model_Name": "iPhone 14 128GB", "launch_price": 799, "avg_current_price": 607.45, "avg_discount": 23.97, "total_reviews": 6265555, "avg_rating": 4.46, "category": "iPhone", "first_date": "2022-09-16"}, {"Model_Name": "Apple Watch Series 8 (45mm)", "launch_price": 429, "avg_current_price": 300.09, "avg_discount": 30.05, "total_reviews": 6435042, "avg_rating": 4.46, "category": "Watch", "first_date": "2022-09-16"}, {"Model_Name": "Apple Watch Ultra", "launch_price": 799, "avg_current_price": 609.21, "avg_discount": 23.75, "total_reviews": 6317116, "avg_rating": 4.45, "category": "Watch", "first_date": "2022-09-23"}, {"Model_Name": "iPad Pro 12.9-inch (M2) 256GB", "launch_price": 1199, "avg_current_price": 986.11, "avg_discount": 17.75, "total_reviews": 6132944, "avg_rating": 4.45, "category": "iPad", "first_date": "2022-10-26"}, {"Model_Name": "MacBook Pro 14-inch M2 Pro 512GB", "launch_price": 1999, "avg_current_price": 1746.5, "avg_discount": 12.63, "total_reviews": 5720112, "avg_rating": 4.45, "category": "Mac", "first_date": "2023-01-24"}, {"Model_Name": "iPhone 15 Pro Max 256GB", "launch_price": 1199, "avg_current_price": 1025.5, "avg_discount": 14.47, "total_reviews": 4741859, "avg_rating": 4.44, "category": "iPhone", "first_date": "2023-09-22"}, {"Model_Name": "Apple Watch Series 9 (45mm)", "launch_price": 429, "avg_current_price": 318.79, "avg_discount": 25.69, "total_reviews": 4640394, "avg_rating": 4.45, "category": "Watch", "first_date": "2023-09-22"}, {"Model_Name": "iPhone 15 128GB", "launch_price": 799, "avg_current_price": 653.7, "avg_discount": 18.19, "total_reviews": 4871812, "avg_rating": 4.45, "category": "iPhone", "first_date": "2023-09-22"}, {"Model_Name": "Apple Watch Ultra 2", "launch_price": 799, "avg_current_price": 652.26, "avg_discount": 18.36, "total_reviews": 4603653, "avg_rating": 4.44, "category": "Watch", "first_date": "2023-09-22"}, {"Model_Name": "MacBook Pro 14-inch M3 Pro 512GB", "launch_price": 1999, "avg_current_price": 1775.95, "avg_discount": 11.16, "total_reviews": 4539390, "avg_rating": 4.45, "category": "Mac", "first_date": "2023-11-07"}, {"Model_Name": "MacBook Air M3 256GB", "launch_price": 1099, "avg_current_price": 954.9, "avg_discount": 13.11, "total_reviews": 4055509, "avg_rating": 4.46, "category": "Mac", "first_date": "2024-03-08"}, {"Model_Name": "iPad Pro 11-inch (M4) 256GB", "launch_price": 999, "avg_current_price": 868.62, "avg_discount": 13.05, "total_reviews": 3730696, "avg_rating": 4.44, "category": "iPad", "first_date": "2024-05-15"}, {"Model_Name": "iPhone 16 128GB", "launch_price": 799, "avg_current_price": 700.18, "avg_discount": 12.37, "total_reviews": 3098809, "avg_rating": 4.45, "category": "iPhone", "first_date": "2024-09-20"}, {"Model_Name": "iPhone 16 Pro 256GB", "launch_price": 1099, "avg_current_price": 977.04, "avg_discount": 11.1, "total_reviews": 3203253, "avg_rating": 4.44, "category": "iPhone", "first_date": "2024-09-20"}, {"Model_Name": "Apple Watch Series X (45mm)", "launch_price": 429, "avg_current_price": 353.9, "avg_discount": 17.51, "total_reviews": 3084340, "avg_rating": 4.44, "category": "Watch", "first_date": "2024-09-21"}, {"Model_Name": "MacBook Pro 14-inch M4 Pro 512GB", "launch_price": 1999, "avg_current_price": 1826.99, "avg_discount": 8.61, "total_reviews": 2993723, "avg_rating": 4.45, "category": "Mac", "first_date": "2024-11-08"}, {"Model_Name": "iPhone 17 128GB", "launch_price": 849, "avg_current_price": 792.21, "avg_discount": 6.69, "total_reviews": 1584960, "avg_rating": 4.46, "category": "iPhone", "first_date": "2025-09-19"}], "yearly_trend": [{"Year": 2020, "avg_discount": 8.71, "avg_price": 662.2, "avg_rating": 4.45, "count": 464}, {"Year": 2021, "avg_discount": 9.18, "avg_price": 722.25, "avg_rating": 4.45, "count": 3284}, {"Year": 2022, "avg_discount": 14.23, "avg_price": 742.5, "avg_rating": 4.45, "count": 7005}, {"Year": 2023, "avg_discount": 18.5, "avg_price": 793.95, "avg_rating": 4.45, "count": 11640}, {"Year": 2024, "avg_discount": 21.0, "avg_price": 801.93, "avg_rating": 4.45, "count": 18207}, {"Year": 2025, "avg_discount": 23.88, "avg_price": 799.67, "avg_rating": 4.45, "count": 24144}, {"Year": 2026, "avg_discount": 26.57, "avg_price": 759.8, "avg_rating": 4.45, "count": 15256}]};
+
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#9295AE';
+const COLORS = {
+  marigold:'#FFB020', amber2:'#FF7A45', teal:'#2DD4BF', coral:'#FB6F84', violet:'#A78BFA', blue:'#60A5FA',
+  paper:'#F6F4EE', muted:'#9295AE', line:'rgba(255,255,255,0.07)'
+};
+const CAT_COLORS = { iPhone:COLORS.marigold, iPad:COLORS.coral, Mac:COLORS.violet, Watch:COLORS.teal };
+const MONO = "'IBM Plex Mono', monospace";
+
+function fmtInt(n){ return Math.round(n).toLocaleString('en-US'); }
+
+function animateCount(el, target, opts={}){
+  const dur = opts.duration || 1200;
+  const decimals = opts.decimals || 0;
+  const suffix = opts.suffix || '';
+  const prefix = opts.prefix || '';
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now-start)/dur);
+    const eased = 1 - Math.pow(1-p, 3);
+    const val = target*eased;
+    el.textContent = prefix + val.toLocaleString('en-US', {minimumFractionDigits:decimals, maximumFractionDigits:decimals}) + suffix;
+    if(p<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// ---------- Icons ----------
+const ICONS = {
+  tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 12l10 10 10-10L14 2Z"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/></svg>',
+  percent:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>',
+  chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>',
+  box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  flame:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#FF7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 17c1 0 2.4-.9 2.5-2.5.1-1.6-1.2-2.5-1.5-4 1.5 1 3 3.5 3 6a4.5 4.5 0 0 1-9 0c0-2 1-4 2.5-6-.5 2.5.5 3.5 1 3.5Z"/></svg>'
+};
+
+// ---------- Header + hero ----------
+document.getElementById('metaRange').textContent = `${DATA.kpis.date_start} → ${DATA.kpis.date_end}`;
+animateCount(document.getElementById('ticketMain'), DATA.kpis.total_records, {suffix:' rows'});
+document.getElementById('ticketDiscount').textContent = DATA.kpis.avg_discount + '%';
+document.getElementById('ticketRating').textContent = DATA.kpis.avg_rating + ' / 5';
+
+// ---------- Story cards ----------
+const ms = DATA.model_stats;
+const topDiscount = ms.reduce((a,b)=> b.avg_discount>a.avg_discount?b:a);
+const topReviews = ms.reduce((a,b)=> b.total_reviews>a.total_reviews?b:a);
+const topPrice = ms.reduce((a,b)=> b.avg_current_price>a.avg_current_price?b:a);
+const stories = [
+  { cls:'c1', k:'Steepest Discount', v:`${topDiscount.avg_discount}% off`, d:topDiscount.Model_Name },
+  { cls:'c2', k:'Most Reviewed', v:`${(topReviews.total_reviews/1e6).toFixed(1)}M reviews`, d:topReviews.Model_Name },
+  { cls:'c3', k:'Priciest on Average', v:`$${fmtInt(topPrice.avg_current_price)}`, d:topPrice.Model_Name },
+];
+document.getElementById('storyRow').innerHTML = stories.map(s=>`
+  <div class="story rise"><div class="bar"></div><div class="k">${s.k}</div><div class="v">${s.v}</div><div class="d">${s.d}</div></div>
+`).join('');
+
+// ---------- KPI strip ----------
+const kpiItems = [
+  { icon:'box', color:'marigold', label:'Listings Analyzed', value: fmtInt(DATA.kpis.total_records) },
+  { icon:'percent', color:'teal', label:'Avg. Discount', value: DATA.kpis.avg_discount + '%' },
+  { icon:'star', color:'coral', label:'Avg. Rating', value: DATA.kpis.avg_rating + ' <span>/ 5</span>' },
+  { icon:'chat', color:'violet', label:'Total Reviews', value: (DATA.kpis.total_reviews/1e6).toFixed(1) + '<span>M</span>' },
+  { icon:'tag', color:'blue', label:'Models Tracked', value: DATA.kpis.num_models }
+];
+document.getElementById('kpiStrip').innerHTML = kpiItems.map((k,i) =>
+  `<div class="kpi c-${k.color} rise" style="animation-delay:${i*60}ms">
+     <div class="icon" style="color:var(--${k.color==='marigold'?'marigold':k.color})">${ICONS[k.icon]}</div>
+     <div class="label">${k.label}</div>
+     <div class="value">${k.value}</div>
+   </div>`
+).join('');
+
+// ---------- Signature: Discount escalator ----------
+const yrs = DATA.yearly_trend.map(d=>d.Year);
+const discs = DATA.yearly_trend.map(d=>d.avg_discount);
+const escalatorGain = (discs[discs.length-1] - discs[0]).toFixed(1);
+document.getElementById('escalatorTag').textContent = `+${escalatorGain}pp since ${yrs[0]} → ${yrs[yrs.length-1]}`;
+
+new Chart(document.getElementById('escalatorChart'), {
+  type:'line',
+  data:{
+    labels: yrs,
+    datasets:[{
+      data: discs,
+      borderColor: COLORS.marigold,
+      backgroundColor: (ctx) => {
+        const g = ctx.chart.ctx.createLinearGradient(0,0,0,240);
+        g.addColorStop(0,'rgba(255,176,32,0.38)');
+        g.addColorStop(0.6,'rgba(255,122,69,0.12)');
+        g.addColorStop(1,'rgba(255,122,69,0)');
+        return g;
+      },
+      fill:true, tension:0.4, borderWidth:3,
+      pointBackgroundColor: COLORS.marigold, pointRadius:5, pointHoverRadius:8,
+      pointBorderColor:'#0E0F16', pointBorderWidth:2
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{
+      backgroundColor:'#1A1C2C', borderColor:'#2E3050', borderWidth:1, padding:10,
+      titleFont:{family:MONO, size:11}, bodyFont:{family:MONO, size:12},
+      callbacks:{ label: c => `Avg discount: ${c.parsed.y}%` } } },
+    scales:{
+      x:{ grid:{ color: COLORS.line }, ticks:{ font:{family:MONO, size:11} } },
+      y:{ grid:{ color: COLORS.line }, ticks:{ callback:v=>v+'%', font:{family:MONO, size:11} } }
+    }
+  }
+});
+
+// ---------- Price trend by category ----------
+const months = DATA.monthly_price_by_category.YearMonth;
+const cats = ['iPhone','iPad','Mac','Watch'];
+let activeCats = new Set(cats);
+
+const toggleDiv = document.getElementById('catToggle');
+toggleDiv.innerHTML = cats.map(c=>`<button data-cat="${c}" class="active">${c}</button>`).join('');
+
+const priceChart = new Chart(document.getElementById('priceTrendChart'), {
+  type:'line',
+  data:{
+    labels: months,
+    datasets: cats.map(c => ({
+      label:c,
+      data: DATA.monthly_price_by_category[c],
+      borderColor: CAT_COLORS[c],
+      backgroundColor: CAT_COLORS[c],
+      spanGaps:true, tension:0.3, borderWidth:2.5, pointRadius:0, pointHoverRadius:4
+    }))
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:'index', intersect:false },
+    plugins:{ legend:{display:false}, tooltip:{
+      backgroundColor:'#1A1C2C', borderColor:'#2E3050', borderWidth:1, padding:10,
+      titleFont:{family:MONO, size:11}, bodyFont:{family:MONO, size:12},
+      callbacks:{ label: c => `${c.dataset.label}: $${c.parsed.y}` } } },
+    scales:{
+      x:{ grid:{display:false}, ticks:{ maxTicksLimit:8, font:{family:MONO, size:10} } },
+      y:{ grid:{ color: COLORS.line }, ticks:{ callback:v=>'$'+v, font:{family:MONO, size:10} } }
+    }
+  }
+});
+toggleDiv.querySelectorAll('button').forEach(btn=>{
+  const c = btn.dataset.cat;
+  btn.style.background = CAT_COLORS[c]; btn.style.color = '#0E0F16'; btn.style.borderColor = CAT_COLORS[c];
+  btn.addEventListener('click', ()=>{
+    if(activeCats.has(c)){ activeCats.delete(c); btn.classList.remove('active'); btn.style.background='transparent'; btn.style.color='var(--muted)'; btn.style.borderColor='var(--line)'; }
+    else{ activeCats.add(c); btn.classList.add('active'); btn.style.background=CAT_COLORS[c]; btn.style.color='#0E0F16'; btn.style.borderColor=CAT_COLORS[c]; }
+    priceChart.data.datasets.forEach(ds=>{ ds.hidden = !activeCats.has(ds.label); });
+    priceChart.update();
+  });
+});
+
+// ---------- Platform comparison ----------
+const pc = DATA.platform_comparison;
+new Chart(document.getElementById('platformChart'), {
+  type:'bar',
+  data:{
+    labels:['Avg Discount %','Avg Rating (x10)','Avg Price ($/10)'],
+    datasets: pc.map((p,i)=>({
+      label:p.Platform,
+      data:[p.avg_discount, p.avg_rating*10, p.avg_price/10],
+      backgroundColor: i===0? COLORS.marigold : COLORS.teal,
+      borderRadius:8, barPercentage:0.6
+    }))
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'top', labels:{ boxWidth:10, font:{size:11}, color:COLORS.muted } },
+      tooltip:{ backgroundColor:'#1A1C2C', borderColor:'#2E3050', borderWidth:1, padding:10 } },
+    scales:{
+      x:{ grid:{display:false}, ticks:{font:{size:10.5}} },
+      y:{ grid:{ color: COLORS.line } }
+    }
+  }
+});
+
+// ---------- Sale event impact ----------
+const seColorMap = { 'Big Billion Days':COLORS.marigold, 'Black Friday':COLORS.violet, 'Great Indian Festival':COLORS.coral, 'Prime Day':COLORS.blue, 'No Sale':COLORS.muted };
+const se = [...DATA.sale_event_impact].sort((a,b)=>b.avg_discount-a.avg_discount);
+new Chart(document.getElementById('saleEventChart'), {
+  type:'bar',
+  data:{
+    labels: se.map(d=>d.Sale_Event_Filled),
+    datasets:[{
+      data: se.map(d=>d.avg_discount),
+      backgroundColor: se.map(d=> seColorMap[d.Sale_Event_Filled] || COLORS.muted),
+      borderRadius:8
+    }]
+  },
+  options:{
+    indexAxis:'y',
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{
+      backgroundColor:'#1A1C2C', borderColor:'#2E3050', borderWidth:1, padding:10,
+      callbacks:{ label:c=>`${c.parsed.x}% avg discount` } } },
+    scales:{
+      x:{ grid:{ color: COLORS.line }, ticks:{ callback:v=>v+'%' } },
+      y:{ grid:{display:false} }
+    }
+  }
+});
+
+// ---------- Donut: category ----------
+const cd = DATA.category_distribution;
+new Chart(document.getElementById('donutChart'), {
+  type:'doughnut',
+  data:{
+    labels: cd.map(d=>d.Product_Category),
+    datasets:[{
+      data: cd.map(d=>d.count),
+      backgroundColor: cd.map(d=>CAT_COLORS[d.Product_Category]),
+      borderColor:'#1A1C2C', borderWidth:4, hoverOffset:8
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'right', labels:{ boxWidth:10, font:{size:11.5}, color:COLORS.muted } },
+      tooltip:{ backgroundColor:'#1A1C2C', borderColor:'#2E3050', borderWidth:1, padding:10 } },
+    cutout:'64%'
+  }
+});
+
+// ---------- Model table ----------
+let sortKey = 'first_date', sortDir = 1;
+let rows = DATA.model_stats.slice();
+
+function renderTable(){
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const catF = document.getElementById('categoryFilter').value;
+  let filtered = rows.filter(r => r.Model_Name.toLowerCase().includes(q) && (catF==='all' || r.category===catF));
+  filtered.sort((a,b)=>{
+    let va=a[sortKey], vb=b[sortKey];
+    if(typeof va === 'string'){ return sortDir * va.localeCompare(vb); }
+    return sortDir * (va-vb);
+  });
+  const maxDisc = Math.max(...rows.map(r=>r.avg_discount));
+  const top3Disc = new Set([...rows].sort((a,b)=>b.avg_discount-a.avg_discount).slice(0,3).map(r=>r.Model_Name));
+  document.getElementById('modelTableBody').innerHTML = filtered.map(r => `
+    <tr>
+      <td class="name">${r.Model_Name}</td>
+      <td><span class="pill ${r.category}">${r.category}</span></td>
+      <td>${r.first_date}</td>
+      <td>$${r.launch_price}</td>
+      <td>$${r.avg_current_price}</td>
+      <td><span class="disc-bar-bg"><span class="disc-bar" style="width:${(r.avg_discount/maxDisc*100).toFixed(0)}%"></span></span>${r.avg_discount}%${top3Disc.has(r.Model_Name) ? `<span class="flame">${ICONS.flame}</span>` : ''}</td>
+      <td>${r.avg_rating} ★</td>
+      <td>${fmtInt(r.total_reviews)}</td>
+    </tr>
+  `).join('');
+}
+document.getElementById('searchBox').addEventListener('input', renderTable);
+document.getElementById('categoryFilter').addEventListener('change', renderTable);
+document.querySelectorAll('th[data-key]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.key;
+    if(sortKey === key){ sortDir *= -1; } else { sortKey = key; sortDir = 1; }
+    renderTable();
+  });
+});
+renderTable();
+</script>
+</body>
+</html>
